@@ -47,7 +47,7 @@ jobs:
         IMAGE_TAG: ${{ github.sha }}
       run: |
         # Получаем доступ к кластеру
-        yc managed-kubernetes cluster get-credentials --id catg7jnf6f1gdsu6moo4 --external --force
+        yc managed-kubernetes cluster get-credentials --id catsav1oo6v2dfd5g1o2 --external --force
         
         # Меняем картинку и деплоим
         sed -i "s|IMAGE_PLACEHOLDER|cr.yandex/$CR_REGISTRY/$CR_REPOSITORY:$IMAGE_TAG|g" k8s/deployment.yaml
