@@ -1,5 +1,5 @@
 
-name: Deploy to Yandex Cloud
+name: Deploy to Yandex Cloud (Hardcore Mode)
 
 on:
   push:
@@ -11,43 +11,47 @@ jobs:
     steps:
     - uses: actions/checkout@v3
 
-    # 1. Логин в Yandex Docker
-    - name: Yandex Cloud CR Login
-      uses: yandex-cloud/login@v1
-      with:
-        service-account-key: ${{ secrets.YC_SA_JSON_CREDENTIALS }}
+    # 1. Устанавливаем YC CLI ВРУЧНУЮ (без плагинов, через curl)
+    # Это сработает 100%, так как мы качаем файл напрямую
+    - name: Install YC CLI Manually
+      run: |
+        curl -sSL https://storage.yandexcloud.net/yandexcloud-yc/install.sh | bash
+        echo "/home/runner/yandex-cloud/bin" >> $GITHUB_PATH
 
-    # 2. Сборка и отправка образа
+    # 2. Авторизуемся через твой JSON-ключ
+    - name: Auth in Yandex Cloud
+      run: |
+        echo '${{ secrets.YC_SA_JSON_CREDENTIALS }}' > sa-key.json
+        yc config profile create sa-profile
+        yc config set service-account-key sa-key.json
+
+    # 3. Сборка и отправка (Login делаем через консоль yc)
     - name: Build and Push Docker Image
       env:
-        CR_REGISTRY: cr-xxxxxxxxxxxxxx  # <--- СЮДА ВСТАВЬ ID РЕЕСТРА !!!
+        CR_REGISTRY: catsav1oo6v2dfd5g1o2  # <--- ВСТАВЬ СЮДА ID РЕЕСТРА !!!
         CR_REPOSITORY: snake-game
         IMAGE_TAG: ${{ github.sha }}
       run: |
+        yc container registry configure-docker
         docker build -t cr.yandex/$CR_REGISTRY/$CR_REPOSITORY:$IMAGE_TAG .
         docker push cr.yandex/$CR_REGISTRY/$CR_REPOSITORY:$IMAGE_TAG
 
-    # 3. Установка kubectl
+    # 4. Установка kubectl (этот плагин от Azure работает всегда)
     - name: Install kubectl
       uses: azure/setup-kubectl@v3
 
-    # 4. Подключение к кластеру (Твой новый ID)
-    - name: Get K8s credentials
-      uses: yandex-cloud/k8s-get-credentials@v1
-      with:
-        service-account-key: ${{ secrets.YC_SA_JSON_CREDENTIALS }}
-        cluster-id: catg7jnf6f1gdsu6moo4
-
-    # 5. Деплой
+    # 5. Деплой (Подключение через ID кластера)
     - name: Deploy to K8s
       env:
-        CR_REGISTRY: cr-xxxxxxxxxxxxxx  # <--- СЮДА ВСТАВЬ ID РЕЕСТРА !!!
+        CR_REGISTRY: catsav1oo6v2dfd5g1o2  # <--- ВСТАВЬ СЮДА ID РЕЕСТРА !!!
         CR_REPOSITORY: snake-game
         IMAGE_TAG: ${{ github.sha }}
       run: |
-        # Подставляем имя образа в манифест
-        sed -i "s|IMAGE_PLACEHOLDER|cr.yandex/$CR_REGISTRY/$CR_REPOSITORY:$IMAGE_TAG|g" k8s/deployment.yaml
+        # Получаем доступ к кластеру
+        yc managed-kubernetes cluster get-credentials --id catg7jnf6f1gdsu6moo4 --external --force
         
-        # Применяем
+        # Меняем картинку и деплоим
+        sed -i "s|IMAGE_PLACEHOLDER|cr.yandex/$CR_REGISTRY/$CR_REPOSITORY:$IMAGE_TAG|g" k8s/deployment.yaml
         kubectl apply -f k8s/deployment.yaml
         kubectl apply -f k8s/service.yaml
+
