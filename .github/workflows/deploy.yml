@@ -27,8 +27,8 @@ jobs:
     
     - name: Build and Push Docker Image
       env:
-        CR_REGISTRY: catsav1oo6v2dfd5g1o2  
-        CR_REPOSITORY: snake-game
+        CR_REGISTRY: crpkd0tmhdvc903q3vcp  
+        CR_REPOSITORY: flappy-k8s
         IMAGE_TAG: ${{ github.sha }}
       run: |
         yc container registry configure-docker
@@ -42,8 +42,8 @@ jobs:
     
     - name: Deploy to K8s
       env:
-        CR_REGISTRY: catsav1oo6v2dfd5g1o2  
-        CR_REPOSITORY: snake-game
+        CR_REGISTRY: crpkd0tmhdvc903q3vcp  
+        CR_REPOSITORY: flappy-k8s
         IMAGE_TAG: ${{ github.sha }}
       run: |
         # Получаем доступ к кластеру
