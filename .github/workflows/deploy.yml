@@ -11,24 +11,23 @@ jobs:
     steps:
     - uses: actions/checkout@v3
 
-    # 1. Устанавливаем YC CLI ВРУЧНУЮ (без плагинов, через curl)
-    # Это сработает 100%, так как мы качаем файл напрямую
+    
     - name: Install YC CLI Manually
       run: |
         curl -sSL https://storage.yandexcloud.net/yandexcloud-yc/install.sh | bash
         echo "/home/runner/yandex-cloud/bin" >> $GITHUB_PATH
 
-    # 2. Авторизуемся через твой JSON-ключ
+    
     - name: Auth in Yandex Cloud
       run: |
         echo '${{ secrets.YC_SA_JSON_CREDENTIALS }}' > sa-key.json
         yc config profile create sa-profile
         yc config set service-account-key sa-key.json
 
-    # 3. Сборка и отправка (Login делаем через консоль yc)
+    
     - name: Build and Push Docker Image
       env:
-        CR_REGISTRY: catsav1oo6v2dfd5g1o2  # <--- ВСТАВЬ СЮДА ID РЕЕСТРА !!!
+        CR_REGISTRY: catsav1oo6v2dfd5g1o2  
         CR_REPOSITORY: snake-game
         IMAGE_TAG: ${{ github.sha }}
       run: |
@@ -36,14 +35,14 @@ jobs:
         docker build -t cr.yandex/$CR_REGISTRY/$CR_REPOSITORY:$IMAGE_TAG .
         docker push cr.yandex/$CR_REGISTRY/$CR_REPOSITORY:$IMAGE_TAG
 
-    # 4. Установка kubectl (этот плагин от Azure работает всегда)
+    
     - name: Install kubectl
       uses: azure/setup-kubectl@v3
 
-    # 5. Деплой (Подключение через ID кластера)
+    
     - name: Deploy to K8s
       env:
-        CR_REGISTRY: catsav1oo6v2dfd5g1o2  # <--- ВСТАВЬ СЮДА ID РЕЕСТРА !!!
+        CR_REGISTRY: catsav1oo6v2dfd5g1o2  
         CR_REPOSITORY: snake-game
         IMAGE_TAG: ${{ github.sha }}
       run: |
