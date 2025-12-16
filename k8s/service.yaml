@@ -2,10 +2,10 @@
 apiVersion: v1
 kind: Service
 metadata:
-  name: snake-service
+  name: flappy-k8s
 spec:
   selector:
-    app: snake
+    app: flappy
   ports:
     - protocol: TCP
       port: 80
