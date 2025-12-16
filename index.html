@@ -1,0 +1,781 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Flappy Bird — Аркада с таблицей лидеров</title>
+  <meta name="description" content="Flappy Bird на HTML5 canvas с локальной таблицей лидеров в стиле старых игровых автоматов." />
+  <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+  <style>
+    body {
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", sans-serif;
+    }
+
+    canvas {
+      image-rendering: crisp-edges;
+      image-rendering: pixelated;
+    }
+  </style>
+</head>
+<body class="min-h-screen bg-gradient-to-b from-slate-900 via-slate-950 to-slate-900 text-slate-100">
+  <div class="min-h-screen flex items-center justify-center px-4 py-6">
+    <main class="w-full max-w-5xl grid gap-6 lg:grid-cols-[minmax(0,_3fr)_minmax(0,_2fr)] items-start">
+      <!-- Левая колонка: игра -->
+      <section class="bg-slate-900/70 border border-slate-700/60 rounded-3xl shadow-2xl shadow-black/50 p-5 sm:p-6 lg:p-8 backdrop-blur">
+        <header class="flex flex-wrap items-center justify-between gap-3 mb-4">
+          <div>
+            <h1 class="text-2xl sm:text-3xl font-bold tracking-tight flex items-center gap-2">
+              <span class="text-emerald-400 drop-shadow-[0_0_18px_rgba(16,185,129,0.7)]">Flappy Bird</span>
+              <span class="hidden sm:inline text-[0.6rem] sm:text-[0.7rem] uppercase tracking-[0.25em] text-slate-400">Arcade</span>
+            </h1>
+            <p class="mt-1 text-sm text-slate-400 max-w-md">
+              Удерживайся в воздухе, пролетай через трубы и набирай очки. После игры введи инициалы и попади в таблицу лидеров
+              — как в старых аркадных автоматах.
+            </p>
+          </div>
+          <div class="shrink-0 text-right text-xs sm:text-sm text-slate-400">
+            <p class="uppercase tracking-[0.22em] text-[0.6rem] mb-1 text-slate-500">Режим</p>
+            <p class="inline-flex items-center gap-1 rounded-full border border-emerald-500/50 bg-emerald-500/10 px-3 py-1 text-emerald-200">
+              <span class="h-2 w-2 rounded-full bg-emerald-400 animate-pulse"></span>
+              Single Player
+            </p>
+          </div>
+        </header>
+
+        <div class="mt-2 mb-4 flex items-center justify-between text-sm sm:text-base">
+          <div class="flex items-baseline gap-2">
+            <span class="text-slate-400">Счёт:</span>
+            <span id="score" class="text-2xl font-semibold text-emerald-400 drop-shadow-[0_0_12px_rgba(34,197,94,0.8)]">0</span>
+          </div>
+          <div class="text-xs sm:text-sm text-slate-400">
+            Рекорд: <span id="bestScoreInline" class="font-semibold text-slate-100">0</span>
+          </div>
+        </div>
+
+        <div class="relative w-full flex justify-center">
+          <canvas
+            id="game"
+            width="480"
+            height="640"
+            class="w-full max-w-md rounded-2xl border border-slate-700/80 bg-slate-950/90 shadow-inner shadow-black/80"
+          ></canvas>
+
+          <!-- Оверлей после окончания игры -->
+          <div
+            id="gameOverlay"
+            class="absolute inset-0 flex items-center justify-center bg-black/70 backdrop-blur-sm hidden"
+          >
+            <div class="w-full max-w-xs mx-auto px-4">
+              <div class="bg-slate-900/95 border border-slate-700/70 rounded-2xl px-4 py-5 sm:px-5 sm:py-6 shadow-xl shadow-black/70">
+                <h2 class="text-lg sm:text-xl font-semibold mb-1 text-center">Игра окончена</h2>
+                <p class="text-sm text-slate-300 text-center mb-3">
+                  Твой счёт: <span id="finalScore" class="font-semibold text-emerald-400">0</span>
+                </p>
+
+                <div class="mb-4">
+                  <label for="nameInput" class="block text-xs uppercase tracking-[0.22em] text-slate-400 mb-2">Инициалы
+                    игрока</label>
+                  <input
+                    id="nameInput"
+                    type="text"
+                    maxlength="3"
+                    autocomplete="off"
+                    class="w-full rounded-xl border border-slate-700 bg-slate-950/80 px-3 py-2 text-center text-base tracking-[0.4em] text-slate-50 placeholder:text-slate-600 focus:outline-none focus:ring-2 focus:ring-emerald-500/70 focus:border-emerald-400 uppercase"
+                    placeholder="AAA"
+                  />
+                  <p class="mt-1 text-[0.7rem] text-slate-500 text-center">
+                    Только латинские буквы, до 3 символов — как на ретро-автоматах.
+                  </p>
+                </div>
+
+                <div class="flex flex-col sm:flex-row gap-2 mt-1">
+                  <button
+                    id="saveScoreBtn"
+                    class="w-full inline-flex items-center justify-center rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-semibold text-sm py-2.5 transition-colors"
+                  >
+                    Сохранить в таблицу
+                  </button>
+                  <button
+                    id="playAgainBtn"
+                    class="w-full inline-flex items-center justify-center rounded-xl border border-slate-600 bg-slate-900/70 hover:bg-slate-800/90 text-slate-100 font-medium text-sm py-2.5 transition-colors"
+                  >
+                    Играть снова
+                  </button>
+                </div>
+
+                <p class="mt-3 text-[0.7rem] text-slate-500 text-center">
+                  Совет: после закрытия окна можно сразу прыгнуть пробелом или кликом для нового раунда.
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="mt-4 flex flex-wrap items-center justify-between gap-3 text-xs sm:text-sm text-slate-300">
+          <div class="space-y-1">
+            <p>
+              Управление:
+              <span class="font-medium text-slate-100">пробел</span> / <span class="font-medium text-slate-100">клик</span> /
+              <span class="font-medium text-slate-100">тап</span> — прыжок.
+            </p>
+            <p class="text-slate-400">
+              Избегай труб и земли. Очко начисляется за каждый пролетевший набор труб.
+            </p>
+          </div>
+          <div class="flex flex-wrap items-center gap-2 justify-end">
+            <button
+              id="quickRestartBtn"
+              class="inline-flex items-center gap-1 rounded-full border border-slate-600 bg-slate-900/80 px-3 py-1.5 text-xs sm:text-sm text-slate-100 hover:bg-slate-800/90"
+            >
+              Быстрый рестарт
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <!-- Правая колонка: таблица лидеров -->
+      <section class="bg-slate-900/70 border border-slate-700/60 rounded-3xl shadow-xl shadow-black/40 p-5 sm:p-6 lg:p-7 backdrop-blur">
+        <header class="flex items-center justify-between gap-2 mb-3">
+          <div>
+            <h2 class="text-xl font-semibold tracking-tight">Таблица лидеров</h2>
+            <p class="text-sm text-slate-400">Сохраняется локально в этом браузере.</p>
+          </div>
+          <span class="inline-flex items-center gap-1 rounded-full border border-emerald-500/50 bg-emerald-500/10 px-2.5 py-1 text-[0.7rem] uppercase tracking-[0.18em] text-emerald-300">
+            <span class="h-1.5 w-1.5 rounded-full bg-emerald-400"></span>
+            Local
+          </span>
+        </header>
+
+        <div class="overflow-hidden rounded-2xl border border-slate-700/70 bg-slate-950/70">
+          <table class="min-w-full text-sm">
+            <thead class="bg-slate-900/80 text-slate-300 text-xs uppercase tracking-[0.18em]">
+              <tr>
+                <th class="px-3 py-2 text-left font-medium">#</th>
+                <th class="px-3 py-2 text-left font-medium">Игрок</th>
+                <th class="px-3 py-2 text-right font-medium">Счёт</th>
+              </tr>
+            </thead>
+            <tbody id="leaderboardBody" class="divide-y divide-slate-800/80">
+              <!-- Заполняется скриптом -->
+            </tbody>
+          </table>
+        </div>
+
+        <div class="mt-4 flex flex-wrap items-center justify-between gap-3 text-xs sm:text-sm text-slate-400">
+          <button
+            id="resetLeaderboardBtn"
+            class="inline-flex items-center gap-1 rounded-full border border-red-500/50 bg-red-500/10 px-3 py-1.5 text-[0.7rem] sm:text-xs text-red-200 hover:bg-red-500/20"
+          >
+            Сбросить рекорды
+          </button>
+          <div class="text-right">
+            Лучший счёт:
+            <span id="bestScoreValue" class="font-semibold text-slate-100">0</span>
+          </div>
+        </div>
+
+        <p class="mt-3 text-[0.7rem] text-slate-500">
+          Таблица хранится в <span class="font-semibold text-slate-300">localStorage</span> этого браузера. Очистка кэша/данных
+          сайта сбросит рекорды.
+        </p>
+      </section>
+    </main>
+  </div>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      const canvas = document.getElementById('game');
+      const ctx = canvas.getContext('2d');
+
+      const scoreEl = document.getElementById('score');
+      const bestScoreInlineEl = document.getElementById('bestScoreInline');
+      const bestScoreValueEl = document.getElementById('bestScoreValue');
+      const finalScoreEl = document.getElementById('finalScore');
+
+      const gameOverlay = document.getElementById('gameOverlay');
+      const nameInput = document.getElementById('nameInput');
+      const saveScoreBtn = document.getElementById('saveScoreBtn');
+      const playAgainBtn = document.getElementById('playAgainBtn');
+      const quickRestartBtn = document.getElementById('quickRestartBtn');
+
+      const leaderboardBody = document.getElementById('leaderboardBody');
+      const resetLeaderboardBtn = document.getElementById('resetLeaderboardBtn');
+
+      const GRAVITY = 0.45;
+      const JUMP_VELOCITY = -8.5;
+      const PIPE_WIDTH = 70;
+      const PIPE_GAP = 155;
+      const PIPE_INTERVAL = 1400; // ms
+      const PIPE_SPEED = 2.7;
+      const GROUND_HEIGHT = 70;
+
+      const BIRD_RADIUS = 16;
+      const BIRD_X = canvas.width * 0.32;
+
+      const GAME_STATE = {
+        READY: 'ready',
+        RUNNING: 'running',
+        OVER: 'over',
+      };
+
+      const state = {
+        gameState: GAME_STATE.READY,
+        score: 0,
+        pipes: [],
+        lastTimestamp: 0,
+        spawnTimer: 0,
+      };
+
+      const bird = {
+        x: BIRD_X,
+        y: canvas.height / 2,
+        vy: 0,
+      };
+
+      let leaderboard = [];
+
+      // ===== ЛИДЕРБОРД =====
+      const LEADERBOARD_KEY = 'flappy_bird_arcade_leaderboard_v1';
+
+      function loadLeaderboard() {
+        try {
+          const raw = localStorage.getItem(LEADERBOARD_KEY);
+          if (!raw) {
+            leaderboard = [];
+            renderLeaderboard();
+            updateBestScoreUI();
+            return;
+          }
+          const parsed = JSON.parse(raw);
+          if (Array.isArray(parsed)) {
+            leaderboard = parsed
+              .filter((item) =>
+                item && typeof item.name === 'string' && typeof item.score === 'number'
+              )
+              .slice(0, 50);
+          } else {
+            leaderboard = [];
+          }
+        } catch (e) {
+          leaderboard = [];
+        }
+        leaderboard.sort((a, b) => b.score - a.score);
+        leaderboard = leaderboard.slice(0, 10);
+        renderLeaderboard();
+        updateBestScoreUI();
+      }
+
+      function saveLeaderboard() {
+        try {
+          localStorage.setItem(LEADERBOARD_KEY, JSON.stringify(leaderboard));
+        } catch (e) {
+          // ignore
+        }
+      }
+
+      function renderLeaderboard() {
+        leaderboardBody.innerHTML = '';
+
+        if (leaderboard.length === 0) {
+          const row = document.createElement('tr');
+          row.className = 'text-slate-500';
+
+          const cell = document.createElement('td');
+          cell.colSpan = 3;
+          cell.className = 'px-3 py-4 text-center text-xs';
+          cell.textContent = 'Пока нет рекордов. Сыграй раунд и запиши своё имя!';
+
+          row.appendChild(cell);
+          leaderboardBody.appendChild(row);
+          return;
+        }
+
+        leaderboard.forEach((entry, index) => {
+          const row = document.createElement('tr');
+          row.className = 'border-t border-slate-800/80';
+
+          const rankCell = document.createElement('td');
+          rankCell.className = 'px-3 py-2 text-left text-slate-400 text-xs sm:text-sm';
+          rankCell.textContent = index + 1;
+
+          const nameCell = document.createElement('td');
+          nameCell.className = 'px-3 py-2 text-left text-slate-100 text-xs sm:text-sm';
+          nameCell.textContent = entry.name;
+
+          const scoreCell = document.createElement('td');
+          scoreCell.className = 'px-3 py-2 text-right text-emerald-300 font-semibold text-xs sm:text-sm';
+          scoreCell.textContent = entry.score;
+
+          if (index === 0) {
+            rankCell.className += ' text-yellow-300 font-semibold';
+            nameCell.className += ' text-yellow-100 font-semibold';
+            scoreCell.className += ' text-yellow-300';
+          }
+
+          row.appendChild(rankCell);
+          row.appendChild(nameCell);
+          row.appendChild(scoreCell);
+          leaderboardBody.appendChild(row);
+        });
+      }
+
+      function updateBestScoreUI() {
+        const best = leaderboard.length ? leaderboard[0].score : 0;
+        bestScoreInlineEl.textContent = best;
+        bestScoreValueEl.textContent = best;
+      }
+
+      function addScoreToLeaderboard(name, score) {
+        leaderboard.push({ name, score, time: Date.now() });
+        leaderboard.sort((a, b) => {
+          if (b.score !== a.score) return b.score - a.score;
+          return a.time - b.time;
+        });
+        leaderboard = leaderboard.slice(0, 10);
+        saveLeaderboard();
+        renderLeaderboard();
+        updateBestScoreUI();
+      }
+
+      function resetLeaderboard() {
+        leaderboard = [];
+        saveLeaderboard();
+        renderLeaderboard();
+        updateBestScoreUI();
+      }
+
+      // ===== ИГРА =====
+      function resetGame() {
+        bird.x = BIRD_X;
+        bird.y = canvas.height / 2;
+        bird.vy = 0;
+
+        state.score = 0;
+        state.pipes = [];
+        state.spawnTimer = 0;
+        state.gameState = GAME_STATE.READY;
+        state.lastTimestamp = performance.now();
+
+        scoreEl.textContent = '0';
+      }
+
+      function startGameIfNeeded() {
+        if (state.gameState === GAME_STATE.READY) {
+          state.gameState = GAME_STATE.RUNNING;
+          bird.vy = JUMP_VELOCITY;
+        } else if (state.gameState === GAME_STATE.RUNNING) {
+          bird.vy = JUMP_VELOCITY;
+        }
+      }
+
+      function gameOver() {
+        if (state.gameState !== GAME_STATE.RUNNING) return;
+
+        state.gameState = GAME_STATE.OVER;
+        finalScoreEl.textContent = state.score;
+        gameOverlay.classList.remove('hidden');
+
+        // Подготовка поля ввода инициалов
+        const defaultName = (nameInput.value || 'AAA').toUpperCase().slice(0, 3);
+        nameInput.value = defaultName;
+        nameInput.focus();
+        nameInput.select();
+      }
+
+      function addPipe() {
+        const minPipeHeight = 60;
+        const availableHeight = canvas.height - GROUND_HEIGHT - PIPE_GAP - 2 * minPipeHeight;
+        const topHeight = minPipeHeight + Math.random() * availableHeight;
+        const bottomHeight = canvas.height - GROUND_HEIGHT - PIPE_GAP - topHeight;
+
+        state.pipes.push({
+          x: canvas.width + 40,
+          topHeight,
+          bottomHeight,
+          passed: false,
+        });
+      }
+
+      function update(delta) {
+        if (state.gameState !== GAME_STATE.RUNNING) return;
+
+        // Птица
+        bird.vy += GRAVITY;
+        bird.y += bird.vy;
+
+        // Таймер спауна труб
+        state.spawnTimer += delta;
+        if (state.spawnTimer >= PIPE_INTERVAL) {
+          state.spawnTimer = 0;
+          addPipe();
+        }
+
+        // Обновление труб
+        const pipes = state.pipes;
+        for (let i = 0; i < pipes.length; i++) {
+          pipes[i].x -= PIPE_SPEED;
+        }
+
+        // Удаляем ушедшие трубы
+        while (pipes.length && pipes[0].x + PIPE_WIDTH < -100) {
+          pipes.shift();
+        }
+
+        // Проверка столкновений и подсчёт очков
+        checkCollisionsAndScore();
+      }
+
+      function checkCollisionsAndScore() {
+        // Столкновение с потолком
+        if (bird.y - BIRD_RADIUS <= 0) {
+          gameOver();
+          return;
+        }
+
+        // Столкновение с землёй
+        if (bird.y + BIRD_RADIUS >= canvas.height - GROUND_HEIGHT) {
+          gameOver();
+          return;
+        }
+
+        const birdBox = {
+          left: bird.x - BIRD_RADIUS,
+          right: bird.x + BIRD_RADIUS,
+          top: bird.y - BIRD_RADIUS,
+          bottom: bird.y + BIRD_RADIUS,
+        };
+
+        for (let i = 0; i < state.pipes.length; i++) {
+          const pipe = state.pipes[i];
+
+          // Верхняя труба
+          const topRect = {
+            left: pipe.x,
+            right: pipe.x + PIPE_WIDTH,
+            top: 0,
+            bottom: pipe.topHeight,
+          };
+
+          // Нижняя труба
+          const bottomRect = {
+            left: pipe.x,
+            right: pipe.x + PIPE_WIDTH,
+            top: canvas.height - GROUND_HEIGHT - pipe.bottomHeight,
+            bottom: canvas.height - GROUND_HEIGHT,
+          };
+
+          if (rectsOverlap(birdBox, topRect) || rectsOverlap(birdBox, bottomRect)) {
+            gameOver();
+            return;
+          }
+
+          if (!pipe.passed && pipe.x + PIPE_WIDTH < bird.x) {
+            pipe.passed = true;
+            state.score += 1;
+            scoreEl.textContent = state.score;
+          }
+        }
+      }
+
+      function rectsOverlap(a, b) {
+        return !(
+          a.right <= b.left ||
+          a.left >= b.right ||
+          a.bottom <= b.top ||
+          a.top >= b.bottom
+        );
+      }
+
+      function drawBackground() {
+        const gradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
+        gradient.addColorStop(0, '#020617');
+        gradient.addColorStop(0.4, '#0f172a');
+        gradient.addColorStop(1, '#020617');
+        ctx.fillStyle = gradient;
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        // Лёгкий параллакс облаков
+        ctx.save();
+        ctx.globalAlpha = 0.28;
+        ctx.fillStyle = '#1e293b';
+        const t = (performance.now() / 1000) * 10;
+        for (let i = 0; i < 5; i++) {
+          const x = ((i * 160 - t) % (canvas.width + 200)) - 100;
+          const y = 80 + 30 * Math.sin((t + i * 2) / 10);
+          ctx.beginPath();
+          ctx.ellipse(x, y, 40, 18, 0, 0, Math.PI * 2);
+          ctx.ellipse(x + 26, y + 8, 34, 16, 0, 0, Math.PI * 2);
+          ctx.ellipse(x - 26, y + 6, 26, 14, 0, 0, Math.PI * 2);
+          ctx.fill();
+        }
+        ctx.restore();
+      }
+
+      function drawGround() {
+        const groundY = canvas.height - GROUND_HEIGHT;
+
+        // Тень земли
+        ctx.fillStyle = '#020617';
+        ctx.fillRect(0, groundY, canvas.width, GROUND_HEIGHT);
+
+        // Основной слой
+        const groundGradient = ctx.createLinearGradient(0, groundY, 0, canvas.height);
+        groundGradient.addColorStop(0, '#0f172a');
+        groundGradient.addColorStop(1, '#020617');
+        ctx.fillStyle = groundGradient;
+        ctx.fillRect(0, groundY, canvas.width, GROUND_HEIGHT);
+
+        // Украшения-"кирпичи"
+        ctx.strokeStyle = 'rgba(15,23,42,0.85)';
+        ctx.lineWidth = 1;
+        const tileSize = 18;
+        for (let y = groundY + 6; y < canvas.height; y += tileSize) {
+          for (let x = 0; x < canvas.width; x += tileSize) {
+            ctx.strokeRect(x + 0.5, y + 0.5, tileSize - 2, tileSize - 2);
+          }
+        }
+      }
+
+      function drawPipes() {
+        for (let i = 0; i < state.pipes.length; i++) {
+          const pipe = state.pipes[i];
+
+          const topX = pipe.x;
+          const topY = 0;
+          const topH = pipe.topHeight;
+
+          const bottomX = pipe.x;
+          const bottomY = canvas.height - GROUND_HEIGHT - pipe.bottomHeight;
+          const bottomH = pipe.bottomHeight;
+
+          // Корпус трубы
+          const pipeGradient = ctx.createLinearGradient(topX, 0, topX + PIPE_WIDTH, 0);
+          pipeGradient.addColorStop(0, '#16a34a');
+          pipeGradient.addColorStop(0.5, '#22c55e');
+          pipeGradient.addColorStop(1, '#15803d');
+
+          ctx.fillStyle = pipeGradient;
+          ctx.strokeStyle = '#022c22';
+          ctx.lineWidth = 3;
+
+          // Верхняя труба
+          ctx.beginPath();
+          ctx.roundRect(topX, topY, PIPE_WIDTH, topH, [4, 4, 0, 0]);
+          ctx.fill();
+          ctx.stroke();
+
+          // Нижняя труба
+          ctx.beginPath();
+          ctx.roundRect(bottomX, bottomY, PIPE_WIDTH, bottomH, [0, 0, 4, 4]);
+          ctx.fill();
+          ctx.stroke();
+
+          // Кромки труб
+          ctx.fillStyle = 'rgba(226,232,240,0.18)';
+          ctx.fillRect(topX + 4, topY + 3, 6, topH - 6);
+          ctx.fillRect(bottomX + 4, bottomY + 3, 6, bottomH - 6);
+        }
+      }
+
+      function drawBird() {
+        ctx.save();
+        ctx.translate(bird.x, bird.y);
+        const angle = Math.max(-0.5, Math.min(0.9, bird.vy / 12));
+        ctx.rotate(angle);
+
+        // Тень
+        ctx.save();
+        ctx.globalAlpha = 0.35;
+        ctx.fillStyle = '#020617';
+        ctx.beginPath();
+        ctx.ellipse(4, BIRD_RADIUS + 6, BIRD_RADIUS * 0.9, BIRD_RADIUS * 0.6, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+
+        // Тело
+        const bodyGradient = ctx.createRadialGradient(0, -6, 4, 0, -4, BIRD_RADIUS + 8);
+        bodyGradient.addColorStop(0, '#fbbf24');
+        bodyGradient.addColorStop(1, '#f97316');
+        ctx.fillStyle = bodyGradient;
+        ctx.beginPath();
+        ctx.ellipse(0, 0, BIRD_RADIUS + 3, BIRD_RADIUS, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Крыло
+        ctx.fillStyle = '#facc15';
+        const flap = Math.sin(performance.now() / 80) * 4;
+        ctx.save();
+        ctx.translate(-4, -2 + flap);
+        ctx.beginPath();
+        ctx.ellipse(0, 0, 9, 6, -0.5, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+
+        // Глаз
+        ctx.fillStyle = '#f9fafb';
+        ctx.beginPath();
+        ctx.arc(6, -6, 5, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = '#020617';
+        ctx.beginPath();
+        ctx.arc(7, -6, 2, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Клюв
+        ctx.fillStyle = '#f97316';
+        ctx.beginPath();
+        ctx.moveTo(12, -2);
+        ctx.lineTo(20, 0);
+        ctx.lineTo(12, 2);
+        ctx.closePath();
+        ctx.fill();
+
+        ctx.restore();
+      }
+
+      function drawScore() {
+        if (state.gameState === GAME_STATE.RUNNING) {
+          ctx.fillStyle = 'rgba(15,23,42,0.6)';
+          ctx.strokeStyle = 'rgba(15,23,42,0.3)';
+          ctx.lineWidth = 3;
+          const text = String(state.score);
+
+          ctx.font = 'bold 38px system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'top';
+
+          ctx.save();
+          ctx.translate(canvas.width / 2, 22);
+          ctx.fillStyle = 'rgba(15,23,42,0.55)';
+          ctx.fillRect(-40, -6, 80, 44);
+
+          ctx.fillStyle = '#e5e7eb';
+          ctx.fillText(text, 0, 0);
+          ctx.restore();
+        }
+      }
+
+      function drawReadyText() {
+        if (state.gameState !== GAME_STATE.READY) return;
+
+        ctx.save();
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+
+        ctx.font = 'bold 28px system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
+        ctx.fillStyle = '#e5e7eb';
+        ctx.fillText('Нажми пробел или кликни', canvas.width / 2, canvas.height / 2 - 20);
+
+        ctx.font = 'normal 16px system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
+        ctx.fillStyle = '#9ca3af';
+        ctx.fillText('чтобы начать полёт', canvas.width / 2, canvas.height / 2 + 10);
+        ctx.restore();
+      }
+
+      function loop(timestamp) {
+        const delta = timestamp - state.lastTimestamp;
+        state.lastTimestamp = timestamp;
+
+        // Обновление
+        if (state.gameState === GAME_STATE.RUNNING) {
+          update(delta);
+        } else if (state.gameState === GAME_STATE.READY) {
+          // Лёгкое покачивание птицы в режиме ожидания
+          bird.y = canvas.height / 2 + Math.sin(timestamp / 420) * 8;
+        }
+
+        // Рендеринг
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        drawBackground();
+        drawPipes();
+        drawGround();
+        drawBird();
+        drawScore();
+        drawReadyText();
+
+        requestAnimationFrame(loop);
+      }
+
+      // ===== ОБРАБОТКА СОБЫТИЙ =====
+      function handleFlapInput(event) {
+        if (event) {
+          // Не прокручиваем страницу при нажатии пробела
+          if (event.type === 'keydown' && (event.code === 'Space' || event.code === 'ArrowUp')) {
+            event.preventDefault();
+          }
+        }
+
+        if (state.gameState === GAME_STATE.OVER) {
+          // В режиме GAME OVER прыжок не обрабатываем, ждём рестарт
+          return;
+        }
+
+        startGameIfNeeded();
+      }
+
+      window.addEventListener('keydown', (e) => {
+        if (e.code === 'Space' || e.code === 'ArrowUp') {
+          handleFlapInput(e);
+        }
+      });
+
+      canvas.addEventListener('pointerdown', (e) => {
+        handleFlapInput(e);
+      });
+
+      quickRestartBtn.addEventListener('click', () => {
+        gameOverlay.classList.add('hidden');
+        resetGame();
+      });
+
+      playAgainBtn.addEventListener('click', () => {
+        gameOverlay.classList.add('hidden');
+        resetGame();
+      });
+
+      saveScoreBtn.addEventListener('click', () => {
+        saveCurrentScoreFromOverlay();
+      });
+
+      nameInput.addEventListener('input', () => {
+        // Только латинские буквы, верхний регистр, до 3 символов
+        let value = nameInput.value.toUpperCase();
+        value = value.replace(/[^A-Z]/g, '');
+        nameInput.value = value.slice(0, 3);
+      });
+
+      nameInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          saveCurrentScoreFromOverlay();
+        }
+      });
+
+      resetLeaderboardBtn.addEventListener('click', () => {
+        const confirmReset = window.confirm('Сбросить все рекорды в таблице лидеров?');
+        if (confirmReset) {
+          resetLeaderboard();
+        }
+      });
+
+      function saveCurrentScoreFromOverlay() {
+        const rawName = nameInput.value.trim();
+        const name = (rawName || '???').toUpperCase().replace(/[^A-Z]/g, '').slice(0, 3) || '???';
+        const score = state.score;
+        if (score > 0) {
+          addScoreToLeaderboard(name, score);
+        }
+        gameOverlay.classList.add('hidden');
+      }
+
+      // ===== ИНИЦИАЛИЗАЦИЯ =====
+      loadLeaderboard();
+      resetGame();
+      requestAnimationFrame((ts) => {
+        state.lastTimestamp = ts;
+        requestAnimationFrame(loop);
+      });
+    });
+  </script>
+</body>
+</html>
