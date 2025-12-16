@@ -2,19 +2,19 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: snake-app
+  name: flappy-k8s
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: snake
+      app: flappy
   template:
     metadata:
       labels:
-        app: snake
+        app: flappy
     spec:
       containers:
-      - name: snake
+      - name: flappy
         image: IMAGE_PLACEHOLDER
         ports:
         - containerPort: 80
