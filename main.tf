@@ -35,13 +35,13 @@ resource "yandex_iam_service_account" "k8s-sa" {
 
 # Даем роботу права
 resource "yandex_resourcemanager_folder_iam_member" "editor" {
-  folder_id = "b1gdm9320mjmnrc94bmk" # <--- И СЮДА ТОЖЕ ВСТАВЬ FOLDER_ID
+  folder_id = "b1gdm9320mjmnrc94bmk" 
   role      = "editor"
   member    = "serviceAccount:${yandex_iam_service_account.k8s-sa.id}"
 }
 
 resource "yandex_resourcemanager_folder_iam_member" "images-puller" {
-  folder_id = "b1gdm9320mjmnrc94bmk" # <--- И СЮДА ТОЖЕ
+  folder_id = "b1gdm9320mjmnrc94bmk" 
   role      = "container-registry.images.puller"
   member    = "serviceAccount:${yandex_iam_service_account.k8s-sa.id}"
 }
