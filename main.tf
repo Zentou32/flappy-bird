@@ -6,7 +6,7 @@ terraform {
   }
 }
 
-# --- НАСТРОЙКИ (Вставь свои данные сюда!) ---
+
 provider "yandex" {
   token     = "y0__xCZiOykAxjB3RMgsOmC2BUwq5Pf8gdFGupPWSdJwHf8qnq06frJFOD8Iw"     # Длинная строка y0_AgAA...
   cloud_id  = "b1gcg18aq91fin5abkog"             # Строка типа b1g...
@@ -15,12 +15,12 @@ provider "yandex" {
 }
 # ---------------------------------------------
 
-# 1. Создаем сеть
+# 1. Созд сеть
 resource "yandex_vpc_network" "k8s-network" {
   name = "k8s-network"
 }
 
-# 2. Создаем подсеть (участок сети)
+# 2. Созд подсеть (участок сети)
 resource "yandex_vpc_subnet" "k8s-subnet" {
   name           = "k8s-subnet"
   zone           = "ru-central1-a"
@@ -46,7 +46,7 @@ resource "yandex_resourcemanager_folder_iam_member" "images-puller" {
   member    = "serviceAccount:${yandex_iam_service_account.k8s-sa.id}"
 }
 
-# 4. Кластер Kubernetes (Головной мозг)
+# 4. Кластер Kubernetes 
 resource "yandex_kubernetes_cluster" "k8s-zonal" {
   name        = "snake-cluster"
   network_id  = yandex_vpc_network.k8s-network.id
@@ -69,7 +69,7 @@ resource "yandex_kubernetes_cluster" "k8s-zonal" {
   ]
 }
 
-# 5. Рабочие узлы (Компьютеры, где будет жить змейка)
+# 5. Рабочие узлы 
 resource "yandex_kubernetes_node_group" "k8s-ng" {
   cluster_id  = yandex_kubernetes_cluster.k8s-zonal.id
   name        = "snake-nodes"
